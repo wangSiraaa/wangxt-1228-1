@@ -89,7 +89,33 @@ func (s *LimitService) Impact(id uint64) (*dto.LimitImpactResp, error) {
 	}, nil
 }
 
-// List 查询限发指令列表
-func (s *LimitService) List(areaID uint64, status string) ([]model.LimitCommand, error) {
-	return s.limits.List(areaID, status)
+// List 查询限发指令列表，每条指令实时计算影响电量估算
+func (s *LimitService) List(areaID uint64, status string) ([]dto.LimitListItem, error) {
+	cmds, err := s.limits.List(areaID, status)
+	if err != nil {
+		return nil, util.NewBizError(util.CodeInternal, err.Error(), http.StatusInternalServerError)
+	}
+	result := make([]dto.LimitListItem, 0, len(cmds))
+	for _, cmd := range cmds {
+		estLoss, avgGen, sample, err := s.EstimateLoss(cmd.AreaID, cmd.Ratio, cmd.StartAt, cmd.EndAt)
+		if err != nil {
+			return nil, err
+		}
+		durationHours := cmd.EndAt.Sub(cmd.StartAt).Hours()
+		result = append(result, dto.LimitListItem{
+			ID:            cmd.ID,
+			AreaID:        cmd.AreaID,
+			Ratio:         cmd.Ratio,
+			StartAt:       cmd.StartAt,
+			EndAt:         cmd.EndAt,
+			Status:        cmd.Status,
+			EstLossKWh:    estLoss,
+			AvgGenKW:      avgGen,
+			SampleCount:   sample,
+			DurationHours: durationHours,
+			CreatedBy:     cmd.CreatedBy,
+			CreatedAt:     cmd.CreatedAt,
+		})
+	}
+	return result, nil
 }

@@ -86,6 +86,9 @@ export interface LimitCommand {
   end_at: string
   status: LimitStatus
   est_loss_kwh: number
+  avg_gen_kw: number
+  sample_count: number
+  duration_hours: number
   created_by: number
   created_at: string
 }

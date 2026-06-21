@@ -54,45 +54,68 @@ func (TimeseriesRepo) Query(areaID uint64, metric string, from, to time.Time) ([
 }
 
 // AvgGenInWindow 历史同时段（同一天内时刻窗口）平均发电功率，用于限发影响估算
+// 查询范围：当月 + 前两个月，共3个月数据；按时段窗口筛选后，先按小时聚合再取平均
 func (TimeseriesRepo) AvgGenInWindow(areaID uint64, startAt, endAt time.Time) (float64, int, error) {
 	startMin := startAt.Hour()*60 + startAt.Minute()
 	endMin := endAt.Hour()*60 + endAt.Minute()
-	var total, count float64
-	// 扫描限发开始前两个月的历史数据
+
+	type hourlyAgg struct {
+		DateKey string  `gorm:"column:date_key"`
+		Hour    int     `gorm:"column:hour"`
+		TotalKW float64 `gorm:"column:total_kw"`
+	}
+
+	var allHours []hourlyAgg
+
 	base := time.Date(startAt.Year(), startAt.Month(), 1, 0, 0, 0, 0, startAt.Location())
-	for i := 1; i <= 2; i++ {
+	for i := 0; i <= 2; i++ {
 		t := base.AddDate(0, -i, 0)
 		y, m := t.Year(), int(t.Month())
 		if err := db.EnsureMonthTable(y, m); err != nil {
 			return 0, 0, err
 		}
 		table := model.MonthTable(y, m)
-		var rows []model.PowerReading
+
+		dateFunc := "DATE(ts)"
+		hourFunc := "HOUR(ts)"
+		if db.Driver() == "sqlite" {
+			dateFunc = "DATE(ts)"
+			hourFunc = "CAST(strftime('%H', ts) AS INTEGER)"
+		}
+
+		var rows []hourlyAgg
 		err := db.DB().Table(table).
-			Select("id, area_id, device_id, ts, gen_kw, reverse_kw").
+			Select(dateFunc+" AS date_key, "+hourFunc+" AS hour, SUM(gen_kw) AS total_kw").
 			Where("area_id = ?", areaID).
+			Group("date_key, hour").
 			Scan(&rows).Error
 		if err != nil {
 			return 0, 0, err
 		}
-		for _, r := range rows {
-			rm := r.Ts.Hour()*60 + r.Ts.Minute()
-			inWin := false
-			if endMin >= startMin {
-				inWin = rm >= startMin && rm <= endMin
-			} else {
-				inWin = rm >= startMin || rm <= endMin
-			}
-			if inWin {
-				total += r.GenKW
-				count++
-			}
+		allHours = append(allHours, rows...)
+	}
+
+	var total float64
+	var count int
+	for _, h := range allHours {
+		hm := h.Hour * 60
+		hmEnd := hm + 60
+		var overlap bool
+		if endMin >= startMin {
+			overlap = hm < endMin && hmEnd > startMin
+		} else {
+			overlap = hm < endMin || hmEnd > startMin
+		}
+		if overlap {
+			total += h.TotalKW
+			count++
 		}
 	}
+
 	if count == 0 {
 		return 0, 0, nil
 	}
-	return total / count, int(count), nil
+	return total / float64(count), count, nil
 }
 
 type ym struct{ year, month int }

@@ -63,7 +63,9 @@ const tabs = [
             <th class="px-5 py-3 font-normal">台区</th>
             <th class="px-5 py-3 font-normal">限发比例</th>
             <th class="px-5 py-3 font-normal">执行时段</th>
+            <th class="px-5 py-3 font-normal">平均功率</th>
             <th class="px-5 py-3 font-normal">影响电量</th>
+            <th class="px-5 py-3 font-normal">样本</th>
             <th class="px-5 py-3 font-normal">状态</th>
             <th class="px-5 py-3 font-normal text-right">操作</th>
           </tr>
@@ -73,7 +75,16 @@ const tabs = [
             <td class="px-5 py-3 text-fog">{{ areaName(l.area_id) }}</td>
             <td class="px-5 py-3"><span class="font-display text-amber-glow">{{ (l.ratio * 100).toFixed(0) }}%</span></td>
             <td class="px-5 py-3 text-fog-dim font-mono text-xs">{{ fmtDateTime(l.start_at) }} → {{ fmtDateTime(l.end_at) }}</td>
+            <td class="px-5 py-3 font-mono text-fog">{{ l.avg_gen_kw.toFixed(1) }} kW</td>
             <td class="px-5 py-3 text-amber-glow font-mono">{{ fmtKWh(l.est_loss_kwh) }}</td>
+            <td class="px-5 py-3">
+              <span 
+                class="font-mono text-xs" 
+                :class="l.sample_count > 0 ? 'text-emerald-glow' : 'text-red-glow'"
+              >
+                {{ l.sample_count }}
+              </span>
+            </td>
             <td class="px-5 py-3"><StatusBadge :label="limitStatusMeta(l.status).label" :cls="limitStatusMeta(l.status).cls" /></td>
             <td class="px-5 py-3 text-right"><span class="text-xs text-cyan-glow">查看影响 →</span></td>
           </tr>

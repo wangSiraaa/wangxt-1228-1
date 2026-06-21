@@ -80,6 +80,21 @@ type LimitCreateReq struct {
 	EndAt   time.Time `json:"end_at" binding:"required"`
 }
 
+type LimitListItem struct {
+	ID            uint64    `json:"id"`
+	AreaID        uint64    `json:"area_id"`
+	Ratio         float64   `json:"ratio"`
+	StartAt       time.Time `json:"start_at"`
+	EndAt         time.Time `json:"end_at"`
+	Status        string    `json:"status"`
+	EstLossKWh    float64   `json:"est_loss_kwh"`
+	AvgGenKW      float64   `json:"avg_gen_kw"`
+	SampleCount   int       `json:"sample_count"`
+	DurationHours float64   `json:"duration_hours"`
+	CreatedBy     uint64    `json:"created_by"`
+	CreatedAt     time.Time `json:"created_at"`
+}
+
 type LimitImpactResp struct {
 	ID             uint64    `json:"id"`
 	AreaID         uint64    `json:"area_id"`
