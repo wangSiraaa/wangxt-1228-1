@@ -54,3 +54,9 @@ export const deviceStatusMeta = (s: string): Meta =>
     grid: { label: '已并网', cls: 'border-pv/40 text-pv' },
     rejected: { label: '已驳回', cls: 'border-danger-glow/40 text-danger-glow' },
   }[s] ?? { label: s, cls: 'border-ink-500 text-fog' })
+
+export const remarkStatusMeta = (s: string): Meta =>
+  ({
+    pending: { label: '待记录', cls: 'border-ink-500 text-fog-dim' },
+    remarked: { label: '已记录', cls: 'border-cyan-glow/40 text-cyan-glow' },
+  }[s] ?? { label: s, cls: 'border-ink-500 text-fog' })

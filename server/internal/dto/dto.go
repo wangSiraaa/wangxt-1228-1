@@ -81,18 +81,20 @@ type LimitCreateReq struct {
 }
 
 type LimitListItem struct {
-	ID            uint64    `json:"id"`
-	AreaID        uint64    `json:"area_id"`
-	Ratio         float64   `json:"ratio"`
-	StartAt       time.Time `json:"start_at"`
-	EndAt         time.Time `json:"end_at"`
-	Status        string    `json:"status"`
-	EstLossKWh    float64   `json:"est_loss_kwh"`
-	AvgGenKW      float64   `json:"avg_gen_kw"`
-	SampleCount   int       `json:"sample_count"`
-	DurationHours float64   `json:"duration_hours"`
-	CreatedBy     uint64    `json:"created_by"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID                 uint64    `json:"id"`
+	AreaID             uint64    `json:"area_id"`
+	Ratio              float64   `json:"ratio"`
+	StartAt            time.Time `json:"start_at"`
+	EndAt              time.Time `json:"end_at"`
+	Status             string    `json:"status"`
+	EstLossKWh         float64   `json:"est_loss_kwh"`
+	AvgGenKW           float64   `json:"avg_gen_kw"`
+	SampleCount        int       `json:"sample_count"`
+	DurationHours      float64   `json:"duration_hours"`
+	RemarkStatus       string    `json:"remark_status"`
+	RemarkedEstLossKWh float64   `json:"remarked_est_loss_kwh"`
+	CreatedBy          uint64    `json:"created_by"`
+	CreatedAt          time.Time `json:"created_at"`
 }
 
 type LimitImpactResp struct {
@@ -105,6 +107,23 @@ type LimitImpactResp struct {
 	AvgGenKW       float64   `json:"avg_gen_kw"`
 	EstLossKWh     float64   `json:"est_loss_kwh"`
 	SampleCount    int       `json:"sample_count"`
+}
+
+type LimitRemarkCreateReq struct {
+	BlockReason string  `json:"block_reason" binding:"required,max=200"`
+	EstLossKWh  float64 `json:"est_loss_kwh" binding:"required,min=0"`
+	Remark      string  `json:"remark" binding:"max=500"`
+}
+
+type LimitRemarkResp struct {
+	ID             uint64    `json:"id"`
+	LimitCommandID uint64    `json:"limit_command_id"`
+	BlockReason    string    `json:"block_reason"`
+	EstLossKWh     float64   `json:"est_loss_kwh"`
+	Remark         string    `json:"remark"`
+	RemarkedBy     uint64    `json:"remarked_by"`
+	RemarkedByName string    `json:"remarked_by_name"`
+	RemarkedAt     time.Time `json:"remarked_at"`
 }
 
 // === 4.6 时序 ===

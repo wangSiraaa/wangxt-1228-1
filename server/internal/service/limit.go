@@ -13,12 +13,14 @@ import (
 
 type LimitService struct {
 	limits repository.LimitRepo
+	users  repository.UserRepo
 	ts     repository.TimeseriesRepo
 }
 
 func NewLimitService() *LimitService {
 	return &LimitService{
 		limits: repository.LimitRepo{},
+		users:  repository.UserRepo{},
 		ts:     repository.TimeseriesRepo{},
 	}
 }
@@ -103,18 +105,85 @@ func (s *LimitService) List(areaID uint64, status string) ([]dto.LimitListItem, 
 		}
 		durationHours := cmd.EndAt.Sub(cmd.StartAt).Hours()
 		result = append(result, dto.LimitListItem{
-			ID:            cmd.ID,
-			AreaID:        cmd.AreaID,
-			Ratio:         cmd.Ratio,
-			StartAt:       cmd.StartAt,
-			EndAt:         cmd.EndAt,
-			Status:        cmd.Status,
-			EstLossKWh:    estLoss,
-			AvgGenKW:      avgGen,
-			SampleCount:   sample,
-			DurationHours: durationHours,
-			CreatedBy:     cmd.CreatedBy,
-			CreatedAt:     cmd.CreatedAt,
+			ID:                 cmd.ID,
+			AreaID:             cmd.AreaID,
+			Ratio:              cmd.Ratio,
+			StartAt:            cmd.StartAt,
+			EndAt:              cmd.EndAt,
+			Status:             cmd.Status,
+			EstLossKWh:         estLoss,
+			AvgGenKW:           avgGen,
+			SampleCount:        sample,
+			DurationHours:      durationHours,
+			RemarkStatus:       cmd.RemarkStatus,
+			RemarkedEstLossKWh: cmd.RemarkedEstLossKWh,
+			CreatedBy:          cmd.CreatedBy,
+			CreatedAt:          cmd.CreatedAt,
+		})
+	}
+	return result, nil
+}
+
+// CreateRemark 创建限发指令执行备注
+func (s *LimitService) CreateRemark(limitCmdID uint64, req dto.LimitRemarkCreateReq, remarkedBy uint64) (*dto.LimitRemarkResp, error) {
+	cmd, err := s.limits.Get(limitCmdID)
+	if err != nil {
+		return nil, util.NewBizError(util.CodeNotFound, "limit command not found", http.StatusNotFound)
+	}
+	remark := &model.LimitExecutionRemark{
+		LimitCommandID: limitCmdID,
+		BlockReason:    req.BlockReason,
+		EstLossKWh:     math.Round(req.EstLossKWh*100) / 100,
+		Remark:         req.Remark,
+		RemarkedBy:     remarkedBy,
+	}
+	if err := s.limits.CreateRemark(remark); err != nil {
+		return nil, util.NewBizError(util.CodeInternal, err.Error(), http.StatusInternalServerError)
+	}
+	if err := s.limits.UpdateRemarkStatus(limitCmdID, "remarked", remark.EstLossKWh); err != nil {
+		return nil, util.NewBizError(util.CodeInternal, err.Error(), http.StatusInternalServerError)
+	}
+	user, err := s.users.GetByID(remarkedBy)
+	if err != nil {
+		return nil, util.NewBizError(util.CodeInternal, "failed to get user info", http.StatusInternalServerError)
+	}
+	return &dto.LimitRemarkResp{
+		ID:             remark.ID,
+		LimitCommandID: remark.LimitCommandID,
+		BlockReason:    remark.BlockReason,
+		EstLossKWh:     remark.EstLossKWh,
+		Remark:         remark.Remark,
+		RemarkedBy:     remark.RemarkedBy,
+		RemarkedByName: user.Name,
+		RemarkedAt:     remark.RemarkedAt,
+	}, nil
+}
+
+// ListRemarks 查询限发指令的执行备注列表
+func (s *LimitService) ListRemarks(limitCmdID uint64) ([]dto.LimitRemarkResp, error) {
+	if _, err := s.limits.Get(limitCmdID); err != nil {
+		return nil, util.NewBizError(util.CodeNotFound, "limit command not found", http.StatusNotFound)
+	}
+	remarks, err := s.limits.ListRemarks(limitCmdID)
+	if err != nil {
+		return nil, util.NewBizError(util.CodeInternal, err.Error(), http.StatusInternalServerError)
+	}
+	result := make([]dto.LimitRemarkResp, 0, len(remarks))
+	for _, r := range remarks {
+		user, err := s.users.GetByID(r.RemarkedBy)
+		name := ""
+		if err == nil {
+			name = user.Name
+		}
+		result = append(result, dto.LimitRemarkResp{
+			ID:             r.ID,
+			LimitCommandID: r.LimitCommandID,
+			BlockReason:    r.BlockReason,
+			EstLossKWh:     r.EstLossKWh,
+			Remark:         r.Remark,
+			RemarkedBy:     r.RemarkedBy,
+			RemarkedByName: name,
+			RemarkedAt:     r.RemarkedAt,
 		})
 	}
 	return result, nil

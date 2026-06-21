@@ -5,6 +5,7 @@ import type {
   Declaration,
   Device,
   LimitCommand,
+  LimitExecutionRemark,
   LimitImpactResp,
   LoginResp,
   Point,
@@ -23,6 +24,7 @@ interface MockState {
   declarations: Declaration[]
   alarms: Alarm[]
   limits: LimitCommand[]
+  remarks: LimitExecutionRemark[]
   seq: number
 }
 
@@ -54,8 +56,9 @@ const state: MockState = {
     { id: 2, area_id: 2, device_id: 4, level: 'warn', reverse_kw: 2.1, alarm_time: iso(hoursAgo(30)), status: 'closed', handled_by: 3, handled_at: iso(hoursAgo(26)), remark: '已调整逆变器无功输出' },
   ],
   limits: [
-    { id: 1, area_id: 2, ratio: 0.3, start_at: iso(hoursAgo(2)), end_at: iso(hoursLater(1)), status: 'executing', est_loss_kwh: 5.2, created_by: 4, created_at: iso(hoursAgo(3)) },
+    { id: 1, area_id: 2, ratio: 0.3, start_at: iso(hoursAgo(2)), end_at: iso(hoursLater(1)), status: 'executing', est_loss_kwh: 5.2, avg_gen_kw: 8.5, sample_count: 12, duration_hours: 3, remark_status: 'pending', remarked_est_loss_kwh: 0, created_by: 4, created_at: iso(hoursAgo(3)) },
   ],
+  remarks: [],
   seq: 100,
 }
 
@@ -221,6 +224,11 @@ export const mockApi = {
       end_at: body.end_at,
       status: 'executing',
       est_loss_kwh: loss,
+      avg_gen_kw: +avg.toFixed(3),
+      sample_count: windowPts.length,
+      duration_hours: +hours.toFixed(2),
+      remark_status: 'pending',
+      remarked_est_loss_kwh: 0,
       created_by: userId,
       created_at: iso(now()),
     }
@@ -249,6 +257,30 @@ export const mockApi = {
       est_loss_kwh: +(avg * cmd.ratio * hours).toFixed(2),
       sample_count: pts.length,
     }
+  },
+  listLimitRemarks(id: number): LimitExecutionRemark[] {
+    const cmd = state.limits.find((l) => l.id === id)
+    if (!cmd) throw new ApiError('not_found', '限发指令不存在', 404)
+    return state.remarks.filter((r) => r.limit_command_id === id).sort((a, b) => b.id - a.id)
+  },
+  createLimitRemark(id: number, body: { block_reason: string; est_loss_kwh: number; remark: string }, userId: number): LimitExecutionRemark {
+    const cmd = state.limits.find((l) => l.id === id)
+    if (!cmd) throw new ApiError('not_found', '限发指令不存在', 404)
+    const user = state.users.find((u) => u.id === userId)
+    const remark: LimitExecutionRemark = {
+      id: nextId(),
+      limit_command_id: id,
+      block_reason: body.block_reason,
+      est_loss_kwh: body.est_loss_kwh,
+      remark: body.remark,
+      remarked_by: userId,
+      remarked_by_name: user?.name ?? '未知用户',
+      remarked_at: iso(now()),
+    }
+    state.remarks.push(remark)
+    cmd.remark_status = 'remarked'
+    cmd.remarked_est_loss_kwh = body.est_loss_kwh
+    return remark
   },
   timeseries(areaId: number, metric: 'gen' | 'reverse', from: string, to: string): Point[] {
     const fromTs = new Date(from).getTime() / 1000

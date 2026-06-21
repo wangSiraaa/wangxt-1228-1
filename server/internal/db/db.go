@@ -44,6 +44,7 @@ func Init(cfg *config.Config) *gorm.DB {
 		&model.Declaration{},
 		&model.Alarm{},
 		&model.LimitCommand{},
+		&model.LimitExecutionRemark{},
 	); err != nil {
 		panic(fmt.Sprintf("automigrate failed: %v", err))
 	}

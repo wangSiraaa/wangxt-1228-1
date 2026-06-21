@@ -7,7 +7,7 @@ import Panel from '@/components/Panel.vue'
 import StatusBadge from '@/components/StatusBadge.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import { useAuthStore } from '@/stores/auth'
-import { fmtDateTime, fmtKWh, limitStatusMeta } from '@/lib/format'
+import { fmtDateTime, fmtKWh, limitStatusMeta, remarkStatusMeta } from '@/lib/format'
 
 const router = useRouter()
 const auth = useAuthStore()
@@ -19,6 +19,7 @@ const loading = ref(true)
 const areaName = (id: number) => summaries.value.find((a) => a.id === id)?.name ?? `台区#${id}`
 const filtered = computed(() => (statusFilter.value ? limits.value.filter((l) => l.status === statusFilter.value) : limits.value))
 const totalLoss = computed(() => limits.value.reduce((s, l) => s + (l.est_loss_kwh ?? 0), 0))
+const totalRemarkedLoss = computed(() => limits.value.reduce((s, l) => s + (l.remarked_est_loss_kwh ?? 0), 0))
 const canCreate = computed(() => ['dispatcher', 'admin'].includes(auth.role))
 
 onMounted(async () => {
@@ -51,7 +52,8 @@ const tabs = [
             @click="statusFilter = t.v"
           >{{ t.label }}</button>
         </div>
-        <span class="chip border-amber-glow/40 text-amber-glow">累计影响 {{ fmtKWh(totalLoss, 0) }}</span>
+        <span class="chip border-amber-glow/40 text-amber-glow">预估影响 {{ fmtKWh(totalLoss, 0) }}</span>
+        <span v-if="totalRemarkedLoss > 0" class="chip border-cyan-glow/40 text-cyan-glow">已记录 {{ fmtKWh(totalRemarkedLoss, 0) }}</span>
       </div>
       <button v-if="canCreate" class="btn-primary" @click="router.push({ name: 'limit-new' })">+ 发布限发</button>
     </div>
@@ -64,9 +66,11 @@ const tabs = [
             <th class="px-5 py-3 font-normal">限发比例</th>
             <th class="px-5 py-3 font-normal">执行时段</th>
             <th class="px-5 py-3 font-normal">平均功率</th>
-            <th class="px-5 py-3 font-normal">影响电量</th>
+            <th class="px-5 py-3 font-normal">预估影响</th>
+            <th class="px-5 py-3 font-normal">记录影响</th>
             <th class="px-5 py-3 font-normal">样本</th>
-            <th class="px-5 py-3 font-normal">状态</th>
+            <th class="px-5 py-3 font-normal">执行状态</th>
+            <th class="px-5 py-3 font-normal">备注状态</th>
             <th class="px-5 py-3 font-normal text-right">操作</th>
           </tr>
         </thead>
@@ -78,6 +82,10 @@ const tabs = [
             <td class="px-5 py-3 font-mono text-fog">{{ l.avg_gen_kw.toFixed(1) }} kW</td>
             <td class="px-5 py-3 text-amber-glow font-mono">{{ fmtKWh(l.est_loss_kwh) }}</td>
             <td class="px-5 py-3">
+              <span v-if="l.remark_status === 'remarked'" class="text-cyan-glow font-mono">{{ fmtKWh(l.remarked_est_loss_kwh) }}</span>
+              <span v-else class="text-fog-dim font-mono text-xs">--</span>
+            </td>
+            <td class="px-5 py-3">
               <span 
                 class="font-mono text-xs" 
                 :class="l.sample_count > 0 ? 'text-emerald-glow' : 'text-red-glow'"
@@ -86,7 +94,8 @@ const tabs = [
               </span>
             </td>
             <td class="px-5 py-3"><StatusBadge :label="limitStatusMeta(l.status).label" :cls="limitStatusMeta(l.status).cls" /></td>
-            <td class="px-5 py-3 text-right"><span class="text-xs text-cyan-glow">查看影响 →</span></td>
+            <td class="px-5 py-3"><StatusBadge :label="remarkStatusMeta(l.remark_status).label" :cls="remarkStatusMeta(l.remark_status).cls" /></td>
+            <td class="px-5 py-3 text-right"><span class="text-xs text-cyan-glow">查看详情 →</span></td>
           </tr>
         </tbody>
       </table>

@@ -21,3 +21,11 @@ func (UserRepo) FirstOrCreate(u *model.User) error {
 	}
 	return db.DB().Create(u).Error
 }
+
+func (UserRepo) GetByID(id uint64) (*model.User, error) {
+	var u model.User
+	if err := db.DB().First(&u, id).Error; err != nil {
+		return nil, err
+	}
+	return &u, nil
+}

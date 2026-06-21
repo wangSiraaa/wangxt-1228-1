@@ -61,3 +61,36 @@ func (ctrl *LimitController) Impact(c *gin.Context) {
 	}
 	util.OK(c, resp)
 }
+
+func (ctrl *LimitController) CreateRemark(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.Fail(c, util.NewBizError(util.CodeBadReq, "invalid id", http.StatusBadRequest))
+		return
+	}
+	var req dto.LimitRemarkCreateReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		util.Fail(c, util.NewBizError(util.CodeBadReq, "invalid request body: "+err.Error(), http.StatusBadRequest))
+		return
+	}
+	remark, err := ctrl.svc.CreateRemark(id, req, middleware.CurrentUserID(c))
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	util.OK(c, remark)
+}
+
+func (ctrl *LimitController) ListRemarks(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		util.Fail(c, util.NewBizError(util.CodeBadReq, "invalid id", http.StatusBadRequest))
+		return
+	}
+	remarks, err := ctrl.svc.ListRemarks(id)
+	if err != nil {
+		handleError(c, err)
+		return
+	}
+	util.OK(c, remarks)
+}

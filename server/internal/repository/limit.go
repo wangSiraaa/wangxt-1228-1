@@ -36,3 +36,30 @@ func (LimitRepo) UpdateEstLoss(id uint64, estLoss float64) error {
 	return db.DB().Model(&model.LimitCommand{}).Where("id = ?", id).
 		Update("est_loss_kwh", estLoss).Error
 }
+
+func (LimitRepo) UpdateRemarkStatus(id uint64, remarkStatus string, remarkedLoss float64) error {
+	return db.DB().Model(&model.LimitCommand{}).Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"remark_status":         remarkStatus,
+			"remarked_est_loss_kwh": remarkedLoss,
+		}).Error
+}
+
+func (LimitRepo) CreateRemark(r *model.LimitExecutionRemark) error {
+	return db.DB().Create(r).Error
+}
+
+func (LimitRepo) ListRemarks(limitCommandID uint64) ([]model.LimitExecutionRemark, error) {
+	var list []model.LimitExecutionRemark
+	err := db.DB().Where("limit_command_id = ?", limitCommandID).
+		Order("id DESC").Find(&list).Error
+	return list, err
+}
+
+func (LimitRepo) GetRemark(id uint64) (*model.LimitExecutionRemark, error) {
+	var r model.LimitExecutionRemark
+	if err := db.DB().First(&r, id).Error; err != nil {
+		return nil, err
+	}
+	return &r, nil
+}

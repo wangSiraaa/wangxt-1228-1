@@ -46,6 +46,8 @@ func Setup(cfg *config.Config, auth *controller.AuthController, area *controller
 			authed.GET("/limits", limit.List)
 			authed.POST("/limits", middleware.RequireRole("dispatcher", "admin"), limit.Create)
 			authed.GET("/limits/:id/impact", limit.Impact)
+			authed.GET("/limits/:id/remarks", limit.ListRemarks)
+			authed.POST("/limits/:id/remarks", middleware.RequireRole("owner", "station", "admin"), limit.CreateRemark)
 
 			// 时序
 			authed.GET("/timeseries", ts.Query)

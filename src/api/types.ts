@@ -89,8 +89,21 @@ export interface LimitCommand {
   avg_gen_kw: number
   sample_count: number
   duration_hours: number
+  remark_status: string
+  remarked_est_loss_kwh: number
   created_by: number
   created_at: string
+}
+
+export interface LimitExecutionRemark {
+  id: number
+  limit_command_id: number
+  block_reason: string
+  est_loss_kwh: number
+  remark: string
+  remarked_by: number
+  remarked_by_name: string
+  remarked_at: string
 }
 
 export interface LimitImpactResp {

@@ -7,6 +7,7 @@ import type {
   Declaration,
   Device,
   LimitCommand,
+  LimitExecutionRemark,
   LimitImpactResp,
   LoginResp,
   Point,
@@ -150,6 +151,12 @@ export const api = {
   },
   limitImpact(id: number): Promise<LimitImpactResp> {
     return withMockFallback(() => http<LimitImpactResp>('GET', `/limits/${id}/impact`), () => mockApi.limitImpact(id))
+  },
+  listLimitRemarks(id: number): Promise<LimitExecutionRemark[]> {
+    return withMockFallback(() => http<LimitExecutionRemark[]>('GET', `/limits/${id}/remarks`), () => mockApi.listLimitRemarks(id))
+  },
+  createLimitRemark(id: number, body: { block_reason: string; est_loss_kwh: number; remark: string }): Promise<LimitExecutionRemark> {
+    return withMockFallback(() => http<LimitExecutionRemark>('POST', `/limits/${id}/remarks`, body), () => mockApi.createLimitRemark(id, body, uid()))
   },
   timeseries(areaId: number, metric: 'gen' | 'reverse', from: string, to: string): Promise<Point[]> {
     return withMockFallback(
